@@ -1,5 +1,15 @@
 # CHANGES — odf
 
+## Unreleased
+
+- `odf::style` 0.20 — `defineListStyle` (named `text:list-style`, ordered
+  numbers or bullets) and `listStyleKind` (classify a list style by name →
+  `ordered` / `bullet`, searching styles.xml then content.xml automatic
+  styles). Lists referenced via `text:style-name` can now carry real
+  numbering instead of only the default bullet. Test: `tests/test-liststyle.tcl`.
+  List levels also emit `style:list-level-properties` (label-alignment) for a
+  proper hanging indent per level.
+
 ## 0.9
 
 Initial public release.
@@ -16,8 +26,8 @@ Packages and what they cover:
   images, bookmarks/refs/indexes/captions/fields, notes, TOC, change tracking,
   annotations, admonitions, master documents (`.odm`), embedded objects/charts,
   fillable forms with database binding, and number-format data styles.
-- `odf::style` (0.19) — page layout, header/footer, styles, notes/line/biblio
-  configuration.
+- `odf::style` (0.20) — page layout, header/footer, styles, notes/line/biblio
+  configuration, and list styles (ordered/bullet).
 - `odf::sheet` (0.24) — `.ods` spreadsheets: cells/types, number/date/time/
   currency/percentage/boolean styles, stored formulas, merges, column widths,
   per-sheet page setup, freeze panes/print ranges, named ranges/expressions,

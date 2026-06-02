@@ -16,7 +16,7 @@ odf/
 ├── odf-0.9.tm          package odf        — container (ZIP/manifest/parts) + metadata + version
 ├── odf/
 │   ├── text-0.57.tm    package odf::text  — content model + builder (.odt): headings/lists/tables/images, bookmarks/refs/indexes/captions/fields, notes, TOC, tracking, annotations, admonitions, master docs (.odm), embedded objects/charts, **fillable forms** (text/textarea/password/number/date/time/checkbox/radio/listbox/combobox/label/button/hidden) with **database binding** (form-level datasource/command, control-level data-field, listbox/combobox source binding) and **number-format data styles** (date/time/number)
-│   ├── style-0.19.tm   package odf::style — page layout, header/footer, styles, notes/line/biblio-config
+│   ├── style-0.20.tm   package odf::style — page layout, header/footer, styles, notes/line/biblio-config, list styles
 │   ├── sheet-0.24.tm   package odf::sheet — spreadsheets (.ods): cells/types, number/date/time/currency/percentage/boolean styles, formulas (stored), merges, column widths, per-sheet page setup, freeze panes/print ranges, **named ranges/expressions**, **data validation**, **conditional formatting** (`style:map`), **database ranges/AutoFilter**, **subtotals**, **pivot/data-pilot (MVP)**, **calculation settings**
 │   ├── draw-0.27.tm    package odf::draw  — drawings (.odg): pages, shapes, paths, connectors, groups, layers, master pages, gradients/hatches/bitmap-fills, transparency gradients, shadows, image embedding, transforms
 │   ├── chart-0.4.tm    package odf::chart — embedded charts (.odc)

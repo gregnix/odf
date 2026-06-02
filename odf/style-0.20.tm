@@ -1,5 +1,8 @@
 ## odf/style-0.11.tm  --  odf::style: named styles + page layout in styles.xml
 ##
+## 0.20: defineListStyle (named text:list-style, ordered numbers or bullets) and
+##       listStyleKind (classify a list style by name -> ordered/bullet) so
+##       text:list elements can carry real numbering, not just default bullets.
 ## 0.19: ODF boolean attributes (text:sort-ascending, text:number-lines,
 ##       text:numbered-entries, style:num-letter-sync, ...) are now emitted as
 ##       "true"/"false" -- a Tcl 1/0 input is normalised; non-boolean input is
@@ -97,6 +100,122 @@ oo::class create odf::Styles {
     }
     method defineCell {name args} {
         my Define $name table-cell [my Groups $args {-cell style:table-cell-properties -text style:text-properties -paragraph style:paragraph-properties}]
+    }
+
+    # ---- list styles (text:list-style: ordered numbers or bullets) ----
+    # Define a named text:list-style in office:styles. Idempotent: a list style
+    # with the same name is replaced. appendList / addSublist reference it by
+    # name (text:style-name). Options:
+    #   -kind ordered|bullet   numbering kind (default bullet)
+    #   -levels N              list levels emitted (default 10, for nesting)
+    #   -numFormat fmt         ordered: style:num-format (default 1; 1/a/A/i/I)
+    #   -numSuffix s           ordered: style:num-suffix (default "."; "" = none)
+    #   -bulletChar c          bullet: text:bullet-char (default U+2022 BULLET)
+    method defineListStyle {name args} {
+        set kind bullet; set levels 10
+        set numFormat 1; set numSuffix "."; set bulletChar "\u2022"
+        foreach {k v} $args {
+            switch -- $k {
+                -kind       { set kind $v }
+                -levels     { set levels $v }
+                -numFormat  { set numFormat $v }
+                -numSuffix  { set numSuffix $v }
+                -bulletChar { set bulletChar $v }
+                default     { error "unknown option: $k" }
+            }
+        }
+        if {$kind ni {ordered bullet}} { error "kind must be ordered or bullet: $kind" }
+        if {![string is integer -strict $levels] || $levels < 1} {
+            error "levels must be a positive integer: $levels"
+        }
+        foreach ls [$Styles getElementsByTagName text:list-style] {
+            if {[$ls getAttribute style:name ""] eq $name} { $ls delete }
+        }
+        set ls [$Doc createElement text:list-style]
+        $ls setAttribute style:name $name
+        for {set lvl 1} {$lvl <= $levels} {incr lvl} {
+            if {$kind eq "ordered"} {
+                set lv [$Doc createElement text:list-level-style-number]
+                $lv setAttribute text:level $lvl
+                $lv setAttribute style:num-format $numFormat
+                if {$numSuffix ne ""} { $lv setAttribute style:num-suffix $numSuffix }
+            } else {
+                set lv [$Doc createElement text:list-level-style-bullet]
+                $lv setAttribute text:level $lvl
+                $lv setAttribute text:bullet-char $bulletChar
+            }
+            # hanging indent per level: label at (lvl-1)*indent, text at lvl*indent
+            set indent [format %.3fcm [expr {$lvl * 0.5}]]
+            set hang   "-0.5cm"
+            set props [$Doc createElement style:list-level-properties]
+            $props setAttribute text:list-level-position-and-space-mode label-alignment
+            set lab [$Doc createElement style:list-level-label-alignment]
+            $lab setAttribute text:label-followed-by listtab
+            $lab setAttribute text:list-tab-stop-position $indent
+            $lab setAttribute fo:text-indent $hang
+            $lab setAttribute fo:margin-left $indent
+            $props appendChild $lab
+            $lv appendChild $props
+            $ls appendChild $lv
+        }
+        $Styles appendChild $ls
+        return $ls
+    }
+
+    # Classify a list style by name -> "ordered" | "bullet" | "" (unknown/absent).
+    # Looks in styles.xml first, then office:automatic-styles in content.xml
+    # (where LibreOffice usually puts generated list styles).
+    method listStyleKind {name} {
+        set hit [my FindListStyle [$Doc documentElement] $name]
+        if {$hit ne ""} { return $hit }
+        if {[catch {$Pkg tree content.xml} cdoc]} { return "" }
+        try {
+            return [my FindListStyle [$cdoc documentElement] $name]
+        } finally {
+            $cdoc delete
+        }
+    }
+    method FindListStyle {root name} {
+        foreach ls [$root getElementsByTagName text:list-style] {
+            if {[$ls getAttribute style:name ""] ne $name} continue
+            foreach c [$ls childNodes] {
+                if {[$c nodeType] ne "ELEMENT_NODE"} continue
+                # prefix-agnostic: localName differs for created vs parsed nodes
+                switch -- [lindex [split [$c nodeName] :] end] {
+                    list-level-style-number { return ordered }
+                    list-level-style-bullet { return bullet }
+                    list-level-style-image  { return bullet }
+                }
+            }
+            return ""
+        }
+        return ""
+    }
+
+    # Number format of an ordered list style -> e.g. 1 | a | A | i | I, or ""
+    # (bullet / not found). Looks in styles.xml then content.xml automatic styles.
+    method listStyleFormat {name} {
+        set hit [my FindListFormat [$Doc documentElement] $name]
+        if {$hit ne ""} { return $hit }
+        if {[catch {$Pkg tree content.xml} cdoc]} { return "" }
+        try {
+            return [my FindListFormat [$cdoc documentElement] $name]
+        } finally {
+            $cdoc delete
+        }
+    }
+    method FindListFormat {root name} {
+        foreach ls [$root getElementsByTagName text:list-style] {
+            if {[$ls getAttribute style:name ""] ne $name} continue
+            foreach c [$ls childNodes] {
+                if {[$c nodeType] ne "ELEMENT_NODE"} continue
+                if {[lindex [split [$c nodeName] :] end] eq "list-level-style-number"} {
+                    return [$c getAttribute style:num-format ""]
+                }
+            }
+            return ""
+        }
+        return ""
     }
 
     # ---- page layout ----
@@ -1053,4 +1172,4 @@ oo::class create odf::Styles {
     }
 }
 
-package provide odf::style 0.19
+package provide odf::style 0.20
