@@ -1,0 +1,12 @@
+# build/demo output
+out/
+*.odt~
+din5008.odt
+built.odt
+
+# editor backups
+*~
+*.bak
+
+# internal working material (handover notes, reference corpus, tools)
+nogit/
